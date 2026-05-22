@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>IOSmarphone PRO - STOCK + VENTAS FULL</title>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.4/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.4/firebase-firestore-compat.js"></script>
+
+<style>
+  body { font-family: Arial; max-width: 1200px; margin:auto; padding:20px; background:#f5f5f5; }
+  input, button { padding:8px; margin:4px; }
+  .card { background:#fff; padding:12px; margin-top:10px; border-radius:10px; }
+  table { width:100%; border-collapse: collapse; background:#fff; margin-top:10px; }
+  th, td { border:1px solid #ddd; padding:6px; text-align:center; font-size:12px; }
+  th { background:#222; color:#fff; }
+</style>
+</head>
+<body>
+
+<h2>📱 IOSmarphone PRO - STOCK + VENTAS FULL</h2>
+
+<div class="card">
+  <h3>📦 Agregar equipo</h3>
+  <input id="model" placeholder="Modelo">
+  <input id="costUSD" type="number" placeholder="Costo USD">
+  <input id="buyRate" type="number" placeholder="Dólar compra">
+  <input id="shipping" type="number" placeholder="Envío ARS">
+  <button onclick="addStock()">Agregar</button>
+</div>
+
+<div class="card">
+  <h3>📊 STOCK</h3>
+  <table>
+    <thead>
+      <tr>
+        <th>Modelo</th>
+        <th>Costo USD</th>
+        <th>Dólar compra</th>
+        <th>Envío ARS</th>
+        <th>Costo ARS</th>
+        <th>Estado</th>
+        <th>Ganancia ARS</th>
+        <th>Ganancia USD</th>
+        <th>Acción</th>
+      </tr>
+    </thead>
+    <tbody id="table"></tbody>
+  </table>
+</div>
+
+<script>
+const firebaseConfig = {
+  apiKey: "TU_API_KEY",
+  authDomain: "TU_PROYECTO.firebaseapp.com",
+  projectId: "TU_PROYECTO",
+  storageBucket: "TU_PROYECTO.appspot.com",
+  messagingSenderId: "XXXX",
+  appId: "XXXX"
+};
+
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+
+function addStock(){
+  db.collection("stock").add({
+    model: model.value,
+    costUSD: Number(costUSD.value),
+    buyRate: Number(buyRate.value),
+    shipping: Number(shipping.value),
+    sold:false,
+    saleUSD:0,
+    sellRate:0
+  });
+}
+
+function sellItem(id){
+  let saleUSD = Number(prompt("Precio venta USD:"));
+  let sellRate = Number(prompt("Dólar venta:"));
+
+  db.collection("stock").doc(id).update({
+    sold:true,
+    saleUSD,
+    sellRate
+  });
+}
+
+function editItem(id){
+  let model = prompt("Modelo:");
+  let costUSD = Number(prompt("Costo USD:"));
+  let buyRate = Number(prompt("Dólar compra:"));
+  let shipping = Number(prompt("Envío ARS:"));
+
+  db.collection("stock").doc(id).update({
+    model,
+    costUSD,
+    buyRate,
+    shipping
+  });
+}
+
+function deleteItem(id){
+  db.collection("stock").doc(id).delete();
+}
+
+function loadStock(){
+  db.collection("stock").onSnapshot(snap=>{
+    let html="";
+
+    snap.forEach(doc=>{
+      let d=doc.data();
+
+      let costARS = (d.costUSD*d.buyRate)+d.shipping;
+      let profitARS = d.sold ? ((d.saleUSD*d.sellRate)-costARS) : 0;
+      let profitUSD = d.sold ? (d.saleUSD-d.costUSD) : 0;
+
+      let status = d.sold ? (profitARS>0 ? "🟢 VENTA OK" : "🔴 PERDIDA") : "📦 STOCK";
+
+      html+=`
+      <tr>
+        <td>${d.model}</td>
+        <td>${d.costUSD}</td>
+        <td>${d.buyRate}</td>
+        <td>${d.shipping}</td>
+        <td>${costARS.toFixed(0)}</td>
+        <td>${status}</td>
+        <td>${profitARS.toFixed(0)}</td>
+        <td>${profitUSD.toFixed(2)}</td>
+        <td>
+          ${d.sold ? "✔️" : <button onclick=\"sellItem('${doc.id}')\">Vender</button>}
+          <button onclick=\"editItem('${doc.id}')\">Editar</button>
+          <button onclick=\"deleteItem('${doc.id}')\">Eliminar</button>
+        </td>
+      </tr>`;
+    });
+
+    table.innerHTML=html;
+  });
+}
+
+loadStock();
+</script>
+
+</body>
+</html>
